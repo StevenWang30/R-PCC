@@ -1,0 +1,7 @@
+build
+*.egg-info
+assets
+*__pycache__*
+*.so
+.idea
+.eggs

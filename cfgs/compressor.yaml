@@ -1,0 +1,10 @@
+BASIC_COMPRESSOR_NAME: 'bzip2'  # 'lz4', 'bzip2' or 'deflate'
+ACCURACY: 0.02
+
+SEGMENT_METHOD: 'FPS'  # 'FPS' or 'DBSCAN'
+GROUND_THRESHOLD: 0.1  # vertical threshold for ground extraction (RANSAC fitting)
+CLUSTER_NUM: 100  # farthest point sampling
+DBSCAN_EPS: 1.5  # used in DBSCAN (distance threshold in each cluster)
+
+MODEL_METHOD: 'point'  # 'point' or 'plane' modeling method
+PLANE_ANGLE_THRESHOLD: 75  # (degree) max angle between scans with plane normal when modeling method is plane.
