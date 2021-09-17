@@ -1,7 +1,9 @@
 build
 *.egg-info
-assets
+assets/others
 *__pycache__*
 *.so
 .idea
 .eggs
+*.rpcc
+

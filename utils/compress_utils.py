@@ -19,19 +19,40 @@ import struct
 
 def extract_features(range_image, feature_region=3, segments=8, sharp_num=4, less_sharp_num=8, flat_num=6):
     feature_map, key_point_map = feature_extractor_cpp.extract_features(range_image, feature_region,
-                                                                    segments, sharp_num, less_sharp_num, flat_num)
+                                                                        segments, sharp_num,
+                                                                        less_sharp_num, flat_num)
+    return feature_map, key_point_map
+
+
+def extract_features_without_ground(range_image, seg_idx, feature_region=3, segments=8, sharp_num=4, less_sharp_num=8, flat_num=6):
+    feature_map, key_point_map = feature_extractor_cpp.extract_features_with_segment(range_image, seg_idx,
+                                                                                     feature_region, segments,
+                                                                                     sharp_num, less_sharp_num,
+                                                                                     flat_num)
     return feature_map, key_point_map
 
 
 class QuantizationModule:
-    def __init__(self, accuracy, acc_deg=(0.06, 0.04, 0.02, 0), uniform=True):
+    def __init__(self, base_accuracy, level_kp_num=(30, 10, 3, 0), level_dacc=(0, 0.02, 0.04, 0.06),
+                 ground_salience_level=2, feature_region=3, segments=8, sharp_num=4, less_sharp_num=8, flat_num=6,
+                 uniform=True):
         self.uniform = uniform
-        self.acc_deg = acc_deg
         if uniform:
-            self.acc = accuracy
+            self.acc = base_accuracy
         else:
-            # non-keypoint, less feature, more feature, dense keypoint
-            self.acc = [accuracy + self.acc_deg[0], accuracy + self.acc_deg[1], accuracy + self.acc_deg[2], accuracy]
+            ####################################################################################
+            # level_kp_num and level_dacc are enabled when non-uniform quantization.           #
+            # level_kp_num: minimum number of key point in this salience level.                #
+            # level_dacc: delta accuracy for this salience level. acc = base_acc + delta_acc.  #
+            ####################################################################################
+            self.level_kp_num = np.array(level_kp_num)
+            self.acc = np.array([base_accuracy] * len(self.level_kp_num)) + np.array(level_dacc)
+            self.ground_level = ground_salience_level
+            self.feature_region = feature_region
+            self.segments = segments
+            self.sharp_num = sharp_num
+            self.less_sharp_num = less_sharp_num
+            self.flat_num = flat_num
 
     def quantize_residual(self, residual, seg_idx, point_cloud=None, range_image=None):
         if self.uniform:
@@ -45,48 +66,52 @@ class QuantizationModule:
             #         continue
             #     residual_collect.extend(residual[..., 0][np.where(seg_idx == m)])
             # residual_quantized = np.rint(np.array(residual_collect) / self.acc).astype(np.int16)
-            salience_score = None
-            quantize_level = None
+            salience_level = None
             key_point_map = None
         else:
-            nonuniform_accuracy = self.acc
+            feature_map, key_point_map = extract_features_without_ground(range_image, seg_idx,
+                                                                         self.feature_region, self.segments,
+                                                                         self.sharp_num, self.less_sharp_num,
+                                                                         self.flat_num)
             # range_image, seg_idx, feature_region=3, segments=8, sharp_num=4, less_sharp_num=8, flat_num=6
-            (curve_map, key_point_map) = feature_extractor_cpp.extract_features_with_segment(range_image, seg_idx, 3, 8, 4, 8, 6)
+            (residual_quantized, salience_level) = quantization_utils_cpp.nonuniform_quantize(seg_idx,
+                                                                                              residual, key_point_map,
+                                                                                              self.level_kp_num,
+                                                                                              self.acc,
+                                                                                              self.ground_level)
+            # # python version
+            # cluster_num = np.max(seg_idx) + 1
+            # salience_level = np.ones(cluster_num, dtype=np.int32) * 3
+            #
+            # for cluster_id in range(cluster_num):
+            #     if cluster_id == 0 or cluster_id == 1:
+            #         continue
+            #     cluster_idx = np.where(seg_idx == cluster_id)
+            #     key_point_num = np.where(key_point_map[cluster_idx] > 0)[0].shape[0]
+            #     cluster_points = point_cloud[cluster_idx]
+            #     if cluster_points.shape[0] < 30:
+            #         continue
+            #     if key_point_num >= 3:
+            #         salience_level[cluster_id] = 2
+            #     if key_point_num >= 10:
+            #         salience_level[cluster_id] = 1
+            #     if key_point_num >= 30:
+            #         salience_level[cluster_id] = 0
+            # salience_level[0] = self.ground_level  # ground
+            # salience_level[1] = 3  # zero points
+            # residual_collect = []
+            # for m in range(cluster_num):
+            #     if m == 1:
+            #         # zero points
+            #         continue
+            #     cluster_acc = nonuniform_accuracy[salience_level[m]]
+            #     cur_residual = residual[..., 0][np.where(seg_idx == m)]
+            #     residual_collect.extend(list(np.rint(cur_residual / cluster_acc)))
+            #
+            # residual_quantized = np.array(residual_collect).astype(np.int32)
+        return residual_quantized, salience_level, key_point_map
 
-            cluster_num = np.max(seg_idx) + 1
-            salience_score = np.zeros(cluster_num)
-            quantize_level = np.zeros(cluster_num)
-
-            for cluster_id in range(cluster_num):
-                if cluster_id == 0 or cluster_id == 1:
-                    continue
-                cluster_idx = np.where(seg_idx == cluster_id)
-                key_point_num = np.where(key_point_map[cluster_idx] > 0)[0].shape[0]
-                cluster_points = point_cloud[cluster_idx]
-                if cluster_points.shape[0] < 30:
-                    continue
-                if key_point_num > 3:
-                    quantize_level[cluster_id] = 1
-                if key_point_num > 10:
-                    quantize_level[cluster_id] = 2
-                if key_point_num > 30:
-                    quantize_level[cluster_id] = 3
-            quantize_level[0] = 1  # ground
-            quantize_level[1] = 0  # zero points
-            quantize_level = quantize_level.astype(np.uint8)
-            residual_collect = []
-            for m in range(cluster_num):
-                if m == 1:
-                    # zero points
-                    continue
-                cluster_acc = nonuniform_accuracy[quantize_level[m]]
-                cur_residual = residual[..., 0][np.where(seg_idx == m)]
-                residual_collect.extend(list(np.rint(cur_residual / cluster_acc)))
-
-            residual_quantized = np.array(residual_collect)
-        return residual_quantized, salience_score, quantize_level, key_point_map
-
-    def dequantize_residual(self, quantized_residual, seg_idx, quantize_level=None):
+    def dequantize_residual(self, quantized_residual, seg_idx, salience_level=None):
         residual = np.zeros_like(seg_idx, dtype=np.float32)
         start = 0
         for m in range(seg_idx.max() + 1):
@@ -98,7 +123,7 @@ class QuantizationModule:
             if self.uniform:
                 cur_acc = self.acc
             else:
-                cur_acc = self.acc[quantize_level[m]]
+                cur_acc = self.acc[salience_level[m]]
             residual[idx] = quantized_residual[start:start + idx[0].shape[0]] * cur_acc
             start += idx[0].shape[0]
         if start != quantized_residual.shape[0]:
@@ -126,7 +151,7 @@ def compress_point_cloud(basic_compressor, plane_param, cluster_idx, salience_le
         if cluster_residual_quantized is not None:
             original_data['cluster_residual'] = cluster_residual_quantized.astype(np.int16)
 
-    if salience_level:
+    if salience_level is not None:
         original_data['salience_level'] = salience_level.astype(np.uint8)
     contour_map, idx_sequence = ContourExtractor.extract_contour(cluster_idx)
     contour_map = contour_map.astype(np.bool)
@@ -159,7 +184,6 @@ def read_compressed_bitstream(file, uniform=True):
     with open(file, "rb") as f:
         if not uniform:
             length = struct.unpack('i', f.read(4))[0]
-            print(length)
             compressed_data['salience_level'] = f.read(length)
         length = struct.unpack('i', f.read(4))[0]
         compressed_data['contour_map'] = f.read(length)
@@ -215,7 +239,7 @@ class BasicCompressor:
                 except:
                     config = yaml.load(f)
             compressor_config = EasyDict(config)
-            self.method_name = compressor_config.BASIC_COMPRESSOR_NAME
+            self.method_name = compressor_config.basic_compressor
         if method_name is not None:
             self.method_name = method_name
 
@@ -231,10 +255,7 @@ class BasicCompressor:
     def compress_dict(self, data_dict):
         compressed_data_dict = copy.deepcopy(data_dict)
         for key, val in data_dict.items():
-            # import time
-            # t = time.time()
             compressed_data_dict[key] = self.compress(val)
-            # print('compress ', key, ' time cost: ', time.time() - t)
         return compressed_data_dict
 
     def decompress_dict(self, data_dict):

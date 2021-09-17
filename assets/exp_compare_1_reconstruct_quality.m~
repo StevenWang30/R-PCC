@@ -1,0 +1,98 @@
+close all;
+clear;
+clc;
+
+% ours_x = [1.39	1.6	1.8	2.22	2.76	2.96	3.24	3.66	4.51	5.57	6.75];
+% ours_cd = [0.1949	0.1469	0.1162	0.0754	0.0449	0.0373	0.029	0.0199	0.01	0.0053	0.0028];
+% ours_f1 = [0.4197	0.4793	0.5486	0.7115	1	1	1	1	1	1	1];
+% ours_psnr = [56.79	60	62.63	67.27	72.43	74.18	76.5	79.8	85.61	91.54	97.55];
+% 
+% draco_x = [0.2	0.43	0.87	1.63	2.86	4.68	7.06	9.82];
+% draco_cd = [0.9	0.4644	0.2334	0.1227	0.0628	0.034	0.0177	0.0091];
+% draco_f1 = [0.0005	0.0041	0.0355	0.2341	0.9385	1	1	1];
+% draco_psnr = [44.71	50.26	56.36	62.11	67.98	73.91	79.86	85.72];
+% 
+% jpeg_x = [2.68	3.32	3.99	4.72	5.52	6.4	7.43	8.64];
+% jpeg_cd = [0.0999	0.0702	0.0469	0.0306	0.0191	0.0114	0.0067	0.0038];
+% jpeg_f1 = [0.6446	0.7778	0.9083	0.9823	0.9995	1	1	1];
+% jpeg_psnr = [65.39	68.25	71.41	74.94	79.06	83.57	88.52	93.39];
+% 
+% tmc13_x = [0.15	0.32	0.55	1.26	2.51	3.05	3.85	5.17	7.84	10.67	13.59];
+% tmc13_cd = [0.681	0.404	0.2659	0.1435	0.0778	0.0639	0.0495	0.0343	0.0183	0.0096	0.0048];
+% tmc13_f1 = [0.0039	0.0216	0.0528	0.2423	0.7598	0.9421	0.9999	1	1	1	1];
+% tmc13_psnr = [45.83	50.44	54.4	60	65.71	67.58	69.97	73.4	79.37	85.31	91.3];
+
+
+ours_x = [	2.22	2.76	2.96	3.24	3.66	4.51	5.57	6.75];
+ours_cd = [	0.0754	0.0449	0.0373	0.029	0.0199	0.01	0.0053	0.0028];
+ours_f1 = [	0.7115	1	1	1	1	1	1	1];
+ours_psnr = [	67.27	72.43	74.18	76.5	79.8	85.61	91.54	97.55];
+
+draco_x = [2.58	4.35	6.72	9.52];
+draco_cd = [0.0654	0.0344	0.0179	0.0092];
+draco_f1 = [0.0155	0.1025	0.6215	1];
+draco_psnr = [67.89	73.78	79.73	85.57];
+
+jpeg_x = [2.56	3.19	3.83	4.53	5.3	6.15	7.15	8.37];
+jpeg_cd = [0.0958	0.0673	0.0457	0.0304	0.0191	0.0113	0.0066	0.0038];
+jpeg_f1 = [0.0958	0.1527	0.2512	0.3962	0.6038	0.8484	0.9822	0.9999];
+jpeg_psnr = [65.54	68.44	71.5	74.79	78.67	83.12	87.86	92.68];
+
+tmc13_x = [	3.54	2.77	2.24	1.06	0.45	0.26	];
+tmc13_cd = [0.0488	0.0628	0.0761	0.1387	0.2624	0.3855];
+tmc13_f1 = [	0.7598	0.9421	0.9999	1	1	1	];
+tmc13_psnr = [65.71	67.58	69.97	73.4	79.37	85.31];
+
+figure(1);
+plot(ours_x, ours_cd, '-or','Markersize',4,'MarkerFaceColor','r', 'linewidth', 1.5)
+hold on
+plot(draco_x, draco_cd, '-xb','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','b')
+plot(jpeg_x, jpeg_cd, '-sc','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','c')
+plot(tmc13_x, tmc13_cd, '->k','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','k')
+set(gca,'fontsize',14,'fontname','Times');
+legend('Ours', 'Draco', 'JPEG Range', 'G-PCC')
+xlabel('Bpp','FontSize',14)
+ylabel('CD(m)','FontSize',14)
+grid on
+set(gca, 'YMinorGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, 'looseInset', [0 0 0 0])
+title('Bitrate v. CD (KITTI)')
+
+
+figure(2);
+plot(ours_x, ours_f1, '-or','Markersize',4,'MarkerFaceColor','r', 'linewidth', 1.5)
+hold on
+plot(draco_x, draco_f1, '-xb','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','b')
+plot(jpeg_x, jpeg_f1, '-sc','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','c')
+plot(tmc13_x, tmc13_f1, '->k','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','k')
+set(gca,'fontsize',14,'fontname','Times');
+legend('Ours', 'Draco', 'JPEG Range', 'G-PCC')
+xlabel('Bpp','FontSize',14)
+ylabel('F1 Score','FontSize',14)
+grid on
+set(gca, 'YMinorGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, 'looseInset', [0 0 0 0])
+% set(gca,'XLim',[0 8]);
+title('Bitrate v. F1 Score (KITTI)')
+
+
+figure(3);
+
+plot(ours_x, ours_psnr, '-or','Markersize',4,'MarkerFaceColor','r', 'linewidth', 1.5)
+hold on
+plot(draco_x, draco_psnr, '-xb','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','b')
+plot(jpeg_x, jpeg_psnr, '-sc','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','c')
+plot(tmc13_x, tmc13_psnr, '->k','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','k')
+set(gca,'fontsize',14,'fontname','Times');
+legend('Ours', 'Draco', 'JPEG Range', 'G-PCC')
+xlabel('Bpp','FontSize',14)
+ylabel('PSNR(dB)','FontSize',14)
+grid on
+set(gca, 'YMinorGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, 'looseInset', [0 0 0 0])
+title('Bitrate v. Point-to-Plane PSNR (KITTI)')
+
+

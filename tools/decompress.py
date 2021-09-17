@@ -6,7 +6,7 @@ from utils.utils import load_compressor_cfg
 from utils.compress_utils import compress_point_cloud, decompress_point_cloud
 from utils.segment_utils import PointCloudSegment
 from utils.evaluate_metrics import calc_chamfer_distance, calc_point_to_point_plane_psnr
-from datasets import build_dataset
+from dataset import build_dataset
 import os
 import sys
 BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 # Data related arguments
 parser.add_argument('--input', help='input compressed bitstream.')
 parser.add_argument('--output', help='output reconstructed point cloud.')
-parser.add_argument('--dataset', help='dataset of the input frame.')
+parser.add_argument('--lidar', help='lidar type of this point cloud collection.')
 
 parser.add_argument('--compressor_yaml', default=os.path.join(BASE_DIR, 'cfgs/compressor.yaml'))
 
@@ -42,25 +42,20 @@ for key, val in vars(args).items():
     print("{:16} {}".format(key, val))
 
 
-if args.eval:
-    assert args.original_point_cloud is not None
-
-
 def compress():
     compressor_cfg = load_compressor_cfg(args.compressor_yaml)
-    accuracy = compressor_cfg['ACCURACY'] * 2
+    accuracy = compressor_cfg['accuracy'] * 2
     basic_compressor = BasicCompressor(compressor_yaml=args.compressor_yaml)
-    dataset = build_dataset(dataset_name=args.dataset)
-    pc_seg = PointCloudSegment(dataset.transform_map)
+    dataset = build_dataset(lidar_type=args.lidar)
     segment_cfg = {
-        'segment_method': compressor_cfg['SEGMENT_METHOD'],
-        'ground_vertical_threshold': compressor_cfg['GROUND_THRESHOLD'],
-        'cluster_num': compressor_cfg['CLUSTER_NUM'],  # used in farthest point sampling
-        'DBSCAN_eps': compressor_cfg['DBSCAN_EPS']  # used in DBSCAN
+        'segment_method': compressor_cfg['segment_method'],
+        'ground_vertical_threshold': compressor_cfg['ground_threshold'],
+        'cluster_num': compressor_cfg['cluster_num'],  # used in farthest point sampling
+        'DBSCAN_eps': compressor_cfg['DBSCAN_eps']  # used in DBSCAN
     }
     model_cfg = {
-        'model_method': compressor_cfg['MODEL_METHOD'],
-        'angle_threshold': compressor_cfg['PLANE_ANGLE_THRESHOLD'],
+        'model_method': compressor_cfg['modeling_method'],
+        'angle_threshold': compressor_cfg['plane_angle_threshold'],
     }
 
     if args.basic_compressor is not None:
@@ -78,10 +73,16 @@ def compress():
     if args.angle_threshold is not None:
         model_cfg['angle_threshold'] = args.angle_threshold
 
+    model_num = segment_cfg['cluster_num'] + 1
     PCTransformer = dataset.PCTransformer
 
-    uniform = (not args.nonuniform)
-    model_num = segment_cfg['cluster_num'] + 1
+    if args.nonuniform:
+        uniform = False
+    else:
+        if compressor_cfg['compress_framework'] == 'uniform':
+            uniform = True
+        else:
+            uniform = False
 
     # reconstruct
     compressed_data = read_compressed_bitstream(args.input, uniform=uniform)
@@ -89,16 +90,33 @@ def compress():
                                                                                       model_num,
                                                                                       dataset.transform_map.shape[0],
                                                                                       dataset.transform_map.shape[1])
-    QM = QuantizationModule(accuracy, uniform=uniform)
+    if uniform:
+        QM = QuantizationModule(accuracy)
+    else:
+        QM = QuantizationModule(accuracy, uniform=False,
+                                level_kp_num=tuple(compressor_cfg['level_key_point_num']),
+                                level_dacc=tuple(compressor_cfg['level_delta_acc']),
+                                ground_salience_level=compressor_cfg['ground_salience_level'],
+                                feature_region=compressor_cfg['feature_region'],
+                                segments=compressor_cfg['segments'],
+                                sharp_num=compressor_cfg['sharp_num'],
+                                less_sharp_num=compressor_cfg['less_sharp_num'],
+                                flat_num=compressor_cfg['flat_num'])
     residual = QM.dequantize_residual(residual_quantized, seg_idx, salience_level)
 
+    pc_seg = PointCloudSegment(dataset.transform_map)
     range_image_pred = pc_seg.intra_predict(seg_idx, plane_param)
     range_image_rec = range_image_pred + residual
     point_cloud_rec = PCTransformer.range_image_to_point_cloud(range_image_rec)
 
     dataset.save_point_cloud_to_file(args.output, point_cloud_rec)
 
+    print('\nDecompression finished.')
+    print(args.output.split('.')[-1], 'file save in ', args.output)
+
     if args.eval:
+        assert args.original_point_cloud is not None, 'If want to evaluate the reconstruction quality, must set the original point cloud file path first.'
+        print('\nStart evaluation...')
         point_cloud, range_image, original_point_cloud = \
             dataset.load_range_image_points_from_file(args.original_point_cloud)
         n_points = np.where(range_image != 0)[0].shape[0]
@@ -106,14 +124,14 @@ def compress():
         range_dif = np.abs(range_image_rec - range_image)
         max_depth_error = np.max(range_dif)
         mean_depth_error = np.mean(range_dif)
-        print('max depth error: ', max_depth_error)
-        print('mean depth error: ', mean_depth_error)
 
         if uniform:
             if max_depth_error > accuracy + 0.00001:
+                print('Does the the uniform or non-uniform compression framework matches the compress processing?')
                 AssertionError('reconstruction error..... please check')
         if not uniform:
             if max_depth_error > accuracy + 0.06 + 0.00001:
+                print('Does the the uniform or non-uniform compression framework matches the compress processing?')
                 AssertionError('reconstruction error..... please check')
 
         chamfer_dist_ours = calc_chamfer_distance(point_cloud, point_cloud_rec, out=False)
@@ -124,6 +142,8 @@ def compress():
         print('\nCompared with ', args.original_point_cloud)
         print('    BPP: ', compressed_bit_size / n_points)
         print('    Compression Ratio: ', (n_points * 32 * 3) / compressed_bit_size)
+        print('    Depth Error (mean): ', mean_depth_error)
+        print('    Depth Error (max): ', max_depth_error)
         print('    Chamfer Distance (mean): ', chamfer_dist_ours['mean'])
         print('    F1 score (threshold=0.02): ', chamfer_dist_ours['f_score'])
         print('    Point-to-Point PSNR (r=59.7): ', point_to_point_result['psnr_mean'])

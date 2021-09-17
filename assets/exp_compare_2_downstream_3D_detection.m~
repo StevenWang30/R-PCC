@@ -1,0 +1,95 @@
+close all;
+clear;
+clc;
+
+
+base_x = [1.2, 10];
+base_car = [90.1632, 90.1632];
+base_ped = [44.0165, 44.0165];
+base_cyc = [47.1647, 47.1647];
+
+
+ours_x = [4.79	2.88	2.5	2.1	1.5		];
+ours_car_ap = [90.1404	90.1539	90.0891	89.8971	88.464	];
+ours_ped_ap = [44.305	44.0989	39.9564	34.8344	21.0474	];
+ours_cyc_ap = [47.16	47.14	44.4015	37.7055	17.8458];
+
+ours_nonuniform_x = [3.88	2.6	2.4 1.9	1.46	];
+ours_nonuniform_car_ap = [90.0984	90.11	90.1248	89.9901	88.5781];
+ours_nonuniform_ped_ap = [43.8126	43.728	40.8865	34.1831	26.9445	];
+ours_nonuniform_cyc_ap = [47.16	46.6916	45.2378	39.7363	18.165	];
+
+draco_x = [2.58	4.35	6.72	9.52];
+draco_car_ap = [89.0293	90.0766	90.1656	90.1408];
+draco_ped_ap = [20.7493	37.4438	44.3736	44.247];
+draco_cyc_ap = [21.2426	40.5589	46.1318	46.6763];
+
+jpeg_x = [2.9	3.19	3.83	4.53	5.3	6.15	7.15	8.37];
+jpeg_car_ap = [84.4061	88.1987	89.3983	90.0554	90.1751	90.1771	90.1754	90.2026];
+jpeg_ped_ap = [10.7241	17.6987	35.1239	39.1197	43.3935	43.7483	43.9665	44.1518];
+jpeg_cyc_ap = [20.3842	25.1242	42.6707	47	47.2559	47.15	47.14	47.165];
+
+tmc13_x = [	10.28	7.47	4.84	3.54	2.77	2.24];
+tmc13_car_ap = [90.1538	90.1526	90.0403	89.8504	89.2843	89.0857];
+tmc13_ped_ap = [44.7454	44.4528	44.2152	38.8221	31.7546	27.6885];
+tmc13_cyc_ap = [46.6909	47.1493	43.7702	40.5911	38.3417	32.4791];
+
+figure(1);
+plot(ours_x, ours_car_ap, '-or','Markersize',4,'MarkerFaceColor','r', 'linewidth', 1.5)
+hold on
+plot(ours_nonuniform_x, ours_nonuniform_car_ap, '-^m','Markersize',4,'MarkerFaceColor','m', 'linewidth', 1.5)
+plot(draco_x, draco_car_ap, '-xb','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','b')
+plot(jpeg_x, jpeg_car_ap, '-sc','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','c')
+plot(tmc13_x, tmc13_car_ap, '->k','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','k')
+plot(base_x, base_car, '-g', 'linewidth', 1.5)
+set(gca,'fontsize',14,'fontname','Times');
+legend('Ours-uniform', 'Ours-nonuniform', 'Draco', 'JPEG Range', 'G-PCC', 'Raw Data', 'Location','SouthEast')
+xlabel('Bpp','FontSize',14)
+ylabel('Car bbox AP','FontSize',14)
+grid on
+set(gca, 'YMinorGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, 'looseInset', [0 0 0 0])
+title('Bitrate v. Car AP (KITTI)')
+
+
+figure(2);
+plot(ours_x, ours_ped_ap, '-or','Markersize',4,'MarkerFaceColor','r', 'linewidth', 1.5)
+hold on
+plot(ours_nonuniform_x, ours_nonuniform_ped_ap, '-^m','Markersize',4,'MarkerFaceColor','m', 'linewidth', 1.5)
+plot(draco_x, draco_ped_ap, '-xb','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','b')
+plot(jpeg_x, jpeg_ped_ap, '-sc','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','c')
+plot(tmc13_x, tmc13_ped_ap, '->k','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','k')
+plot(base_x, base_ped, '-g', 'linewidth', 1.5)
+set(gca,'fontsize',14,'fontname','Times');
+legend('Ours-uniform', 'Ours-nonuniform', 'Draco', 'JPEG Range', 'G-PCC', 'Location','SouthEast')
+xlabel('Bpp','FontSize',14)
+ylabel('Pedestrian bbox AP','FontSize',14)
+grid on
+set(gca, 'YMinorGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, 'looseInset', [0 0 0 0])
+% set(gca,'XLim',[0 8]);
+title('Bitrate v. Pedestrian AP (KITTI)')
+
+
+figure(3);
+
+plot(ours_x, ours_cyc_ap, '-or','Markersize',4,'MarkerFaceColor','r', 'linewidth', 1.5)
+hold on
+plot(ours_nonuniform_x, ours_nonuniform_cyc_ap, '-^m','Markersize',4,'MarkerFaceColor','m', 'linewidth', 1.5)
+plot(draco_x, draco_cyc_ap, '-xb','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','b')
+plot(jpeg_x, jpeg_cyc_ap, '-sc','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','c')
+plot(tmc13_x, tmc13_cyc_ap, '->k','Markersize',4, 'linewidth', 1.5,'MarkerFaceColor','k')
+plot(base_x, base_cyc, '-g', 'linewidth', 1.5)
+set(gca,'fontsize',14,'fontname','Times');
+legend('Ours-uniform', 'Ours-nonuniform', 'Draco', 'JPEG Range', 'G-PCC')
+xlabel('Bpp','FontSize',14)
+ylabel('Cyclist bbox AP','FontSize',14)
+grid on
+set(gca, 'YMinorGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, 'looseInset', [0 0 0 0])
+title('Bitrate v. Cyclist AP (KITTI)')
+
+

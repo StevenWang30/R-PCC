@@ -1,4 +1,3 @@
-//c++ -O3 -Wall -shared -std=c++11 -fPIC $(python3 -m pybind11 --includes) feature_extraction.cpp -o feature_extractor$(python3-config --extension-suffix)
 #include <iostream>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -73,13 +72,7 @@ std::tuple<py::array_t<float>, py::array_t<int>> extract_features_with_segment(p
             valid_feat_map.push_back(make_pair(valid_feat[s_i], s_i));
         }
 
-
-
-//        int s = feature_region
-//        int e = pc_h.shape[0] - feature_region - 1
         for (int j = 0; j < segments; j++){
-//            sp = s + floor((e - s) / segments) * j
-//            ep = s + floor((e - s) / segments) * (j + 1)
             int sp = floor(valid_feat_map.size() / segments) * j;
             int ep = floor(valid_feat_map.size() / segments) * (j + 1);
 
@@ -118,8 +111,6 @@ std::tuple<py::array_t<float>, py::array_t<int>> extract_features_with_segment(p
                     }
             }
         }
-
-
     }
 
   // reshape array to match input shape
@@ -127,7 +118,6 @@ std::tuple<py::array_t<float>, py::array_t<int>> extract_features_with_segment(p
     key_point_map.resize({h, w});
 
     return std::make_tuple(sharp_feat_map, key_point_map);
-//  return sharp_feat_map;
 }
 
 
@@ -184,13 +174,7 @@ std::tuple<py::array_t<float>, py::array_t<int>> extract_features(py::array_t<fl
             valid_feat_map.push_back(make_pair(valid_feat[s_i], s_i));
         }
 
-
-
-//        int s = feature_region
-//        int e = pc_h.shape[0] - feature_region - 1
         for (int j = 0; j < segments; j++){
-//            sp = s + floor((e - s) / segments) * j
-//            ep = s + floor((e - s) / segments) * (j + 1)
             int sp = floor(valid_feat_map.size() / segments) * j;
             int ep = floor(valid_feat_map.size() / segments) * (j + 1);
 
@@ -229,8 +213,6 @@ std::tuple<py::array_t<float>, py::array_t<int>> extract_features(py::array_t<fl
                     }
             }
         }
-
-
     }
 
   // reshape array to match input shape
@@ -238,7 +220,6 @@ std::tuple<py::array_t<float>, py::array_t<int>> extract_features(py::array_t<fl
     key_point_map.resize({h, w, 1});
 
     return std::make_tuple(sharp_feat_map, key_point_map);
-//  return sharp_feat_map;
 }
 
 
@@ -277,7 +258,6 @@ py::array_t<float> intra_predict(py::array_t<int> seg_idx, py::array_t<float> mo
 
     // return array
     auto pred_range_image = py::array_t<float>(si_buf.size);
-//
     py::buffer_info pred_buf = pred_range_image.request();
     float *pred_ptr = (float *) pred_buf.ptr;
 
@@ -314,7 +294,6 @@ py::array_t<int> uniform_quantize(py::array_t<int> seg_idx, py::array_t<float> r
     int h = si_buf.shape[0];
     int w = si_buf.shape[1];
 
-
     int cluster_num = 0;
     for (int h_i = 0; h_i < h; h_i++)
         for (int w_i = 0; w_i < w; w_i++)
@@ -339,14 +318,11 @@ py::array_t<int> uniform_quantize(py::array_t<int> seg_idx, py::array_t<float> r
         }
     }
 
-
     // return array
     auto quantized_residual_collect = py::array_t<int>(total_num);
     py::buffer_info qr_buf = quantized_residual_collect.request();
     int *qr_ptr = (int *) qr_buf.ptr;
 
-
-    vector<int> quantized_residual_sort;
     int k = 0;
     for (int i = 0; i < cluster_num; i++)
         for (std::vector<int>::iterator it = quantized_residual[i].begin() ; it != quantized_residual[i].end(); it++){
@@ -354,8 +330,97 @@ py::array_t<int> uniform_quantize(py::array_t<int> seg_idx, py::array_t<float> r
             k++;
         }
 
-
     return quantized_residual_collect;
+}
+
+
+std::tuple<py::array_t<int>, py::array_t<int>> nonuniform_quantize(py::array_t<int> seg_idx,
+                                     py::array_t<float> residual, py::array_t<int> key_point_map,
+                                     py::array_t<int> level_kp_num, py::array_t<float> level_acc, int ground_level) {
+    // input array
+    py::buffer_info si_buf = seg_idx.request();
+    int *si_ptr = (int *) si_buf.ptr;
+    py::buffer_info ri_buf = residual.request();
+    float *ri_ptr = (float *) ri_buf.ptr;
+    py::buffer_info kp_buf = key_point_map.request();
+    int *kp_ptr = (int *) kp_buf.ptr;
+    py::buffer_info lkpn_buf = level_kp_num.request();
+    int *lkpn_ptr = (int *) lkpn_buf.ptr;
+    py::buffer_info la_buf = level_acc.request();
+    float *la_ptr = (float *) la_buf.ptr;
+    int h = si_buf.shape[0];
+    int w = si_buf.shape[1];
+    int level_num = la_buf.shape[0];
+
+    int cluster_num = 0;
+    for (int h_i = 0; h_i < h; h_i++)
+        for (int w_i = 0; w_i < w; w_i++)
+            if (si_ptr[h_i * w + w_i] > cluster_num)
+                cluster_num = si_ptr[h_i * w + w_i];
+    cluster_num += 1;
+
+    vector< vector<float> > quantized_residual;
+    vector<int> kp_num;
+    vector<int> p_num;
+    vector<int> salience_level;
+    vector<float> cluster_acc;
+    for (int i = 0; i < cluster_num; i++){
+        vector<float> cur_qr;
+        quantized_residual.push_back(cur_qr);
+        kp_num.push_back(0);
+        p_num.push_back(0);
+        salience_level.push_back(0);
+        cluster_acc.push_back(0);
+    }
+
+    int total_num = 0;
+    for (int h_i = 0; h_i < h; h_i++) {
+        for (int w_i = 0; w_i < w; w_i++){
+            int idx = si_ptr[h_i * w + w_i];
+            if (idx == 1) continue;
+            if (kp_ptr[h_i * w + w_i] > 0)
+                kp_num[idx] += 1;
+            p_num[idx] += 1;
+            quantized_residual[idx].push_back(ri_ptr[h_i * w + w_i]);
+            total_num += 1;
+        }
+    }
+    for (int i = 0; i < cluster_num; i++){
+        if (i == 0)
+            salience_level[0] = ground_level;  // ground points
+        else if (i == 1)
+            salience_level[1] = level_num - 1;  // zero points;
+        else{
+            if (p_num[i] < 30)
+                salience_level[i] = level_num - 1;
+            else
+                for (int l = 0; l < level_num; l++){
+                    if (kp_num[i] >= lkpn_ptr[l]){
+                        salience_level[i] = l;
+                        break;
+                    }
+                }
+        }
+        cluster_acc[i] = la_ptr[salience_level[i]];
+    }
+
+    // return array
+    auto quantized_residual_collect = py::array_t<int>(total_num);
+    py::buffer_info qr_buf = quantized_residual_collect.request();
+    int *qr_ptr = (int *) qr_buf.ptr;
+    auto salience_level_array = py::array_t<int>(cluster_num);
+    py::buffer_info sl_buf = salience_level_array.request();
+    int *sl_ptr = (int *) sl_buf.ptr;
+
+    int k = 0;
+    for (int i = 0; i < cluster_num; i++){
+        sl_ptr[i] = salience_level[i];
+        for (std::vector<float>::iterator it = quantized_residual[i].begin() ; it != quantized_residual[i].end(); it++){
+            qr_ptr[k] = round(*it / cluster_acc[i]);
+            k++;
+        }
+    }
+    return std::make_tuple(quantized_residual_collect, salience_level_array);
 }
 
 
@@ -457,34 +522,34 @@ PYBIND11_MODULE(feature_extractor_cpp, m) {
         m.doc() = "Find point's feature and search key points using pybind11"; // optional module docstring
 
         m.def("extract_features_with_segment", &extract_features_with_segment, "Find point's feature and search key points after FPS segmentation.");
-        m.def("extract_features", &extract_features, "Find point's feature and search key points for whole range image");
+        m.def("extract_features", &extract_features, "Find point's feature and search key points for whole range image.");
 
-        m.def("segment_index_clean", &segment_index_clean, "Find point's feature and search key points for whole range image");
-//        m.def("nonuniform_quantize", &nonuniform_quantize, "Find point's feature and search key points.");
+        m.def("segment_index_clean", &segment_index_clean, "Clean the index map.");
 }
 
 // segmentation modules
 PYBIND11_MODULE(segment_utils_cpp, m) {
-    m.doc() = "cpp modules of segment_utils.py using pybind11"; // optional module docstring
+    m.doc() = "Cpp modules of segment_utils.py using pybind11"; // optional module docstring
 
-    m.def("intra_predict", &intra_predict, "intra-prediction with segmentation and modeling information.");
-    m.def("point_modeling", &point_modeling, "intra-prediction with segmentation and modeling information.");
+    m.def("intra_predict", &intra_predict, "Intra-prediction with segmentation and modeling information.");
+    m.def("point_modeling", &point_modeling, "Point modeling module for each cluster.");
 
 }
 
 // quantization modules
 PYBIND11_MODULE(quantization_utils_cpp, m) {
-    m.doc() = "cpp modules of segment_utils.py using pybind11"; // optional module docstring
+    m.doc() = "Cpp modules of class QuantizationModule in compress_utils.py using pybind11";
 
-    m.def("uniform_quantize", &uniform_quantize, "intra-prediction with segmentation and modeling information.");
+    m.def("uniform_quantize", &uniform_quantize, "Uniform quantization (without zero points).");
+    m.def("nonuniform_quantize", &nonuniform_quantize, "Non-uniform quantization (without zero points).");
 }
 
 
 // dataset transformer modules
 PYBIND11_MODULE(dataset_utils_cpp, m) {
-    m.doc() = "cpp modules of transformer.py using pybind11"; // optional module docstring
+    m.doc() = "Cpp modules of transformer.py using pybind11"; // optional module docstring
 
-    m.def("point_cloud_to_range_image_even", &point_cloud_to_range_image_even, "intra-prediction with segmentation and modeling information.");
+    m.def("point_cloud_to_range_image_even", &point_cloud_to_range_image_even, "Project point cloud into range image with even vertical channels distribution.");
 }
 
 

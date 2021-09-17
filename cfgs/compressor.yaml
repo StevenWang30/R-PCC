@@ -1,10 +1,37 @@
-BASIC_COMPRESSOR_NAME: 'bzip2'  # 'lz4', 'bzip2' or 'deflate'
-ACCURACY: 0.02
+#--------------------------------------------------------------------------------
+#--------------------     uniform or non-uniform setting      ------------------#
+#--------------------------------------------------------------------------------
+compress_framework: 'uniform'  # uniform or non-uniform
+accuracy: 0.02  # base accuracy
+# follows are enabled in non-uniform compression
+level_key_point_num: [30, 10, 3, 0]
+level_delta_acc: [0, 0.02, 0.04, 0.06]
+ground_salience_level: 2
+feature_region: 3
+segments: 8
+sharp_num: 4
+less_sharp_num: 8
+flat_num: 6
+#--------------------------------------------------------------------------------
 
-SEGMENT_METHOD: 'FPS'  # 'FPS' or 'DBSCAN'
-GROUND_THRESHOLD: 0.1  # vertical threshold for ground extraction (RANSAC fitting)
-CLUSTER_NUM: 100  # farthest point sampling
-DBSCAN_EPS: 1.5  # used in DBSCAN (distance threshold in each cluster)
+#--------------------------------------------------------------------------------
+#--------------------      segmentation method setting      --------------------#
+#--------------------------------------------------------------------------------
+segment_method: 'FPS'  # 'FPS' or 'DBSCAN'
+ground_threshold: 0.1  # vertical threshold for ground extraction (RANSAC fitting)
+cluster_num: 100  # farthest point sampling
+DBSCAN_eps: 1.5  # used in DBSCAN (distance threshold in each cluster)
+#--------------------------------------------------------------------------------
 
-MODEL_METHOD: 'point'  # 'point' or 'plane' modeling method
-PLANE_ANGLE_THRESHOLD: 75  # (degree) max angle between scans with plane normal when modeling method is plane.
+#--------------------------------------------------------------------------------
+#--------------------        modeling method setting         -------------------#
+#--------------------------------------------------------------------------------
+modeling_method: 'point'  # 'point' or 'plane' modeling method
+plane_angle_threshold: 75  # (degree) max angle between scans with plane normal when modeling method is plane.
+#--------------------------------------------------------------------------------
+
+#--------------------------------------------------------------------------------
+#--------------------         basic compressor setting       -------------------#
+#--------------------------------------------------------------------------------
+basic_compressor: 'bzip2'  # 'lz4', 'bzip2' or 'deflate'
+#--------------------------------------------------------------------------------
