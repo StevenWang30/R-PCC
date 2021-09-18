@@ -26,23 +26,23 @@ If you find our paper or code useful, please cite:
 ## Introduction
 **The framework architecture of R-PCC:**
 
-<p align="center">
-  <img src="assets/framework_architecture.png" width="600" height="147">
-</p>
+<div align="center">
+  <img src="assets/framework_architecture.png" width="99%" >
+</div>
 
 
 **Qualitative results:**
 
 <div align="center">
 
-<img src="assets/ours_uniform.png" width="120" height="66">
-<img src="assets/ours_nonuniform.png" width="120" height="66">
-<img src="assets/draco.png" width="120" height="66">
-<img src="assets/G-PCC.png" width="120" height="66">
-<img src="assets/JPEG-Range.png" width="120" height="66">
+<img src="assets/ours_uniform.png" width="19.5%" >
+<img src="assets/ours_nonuniform.png" width="19.5%" >
+<img src="assets/draco.png" width="19.5%" >
+<img src="assets/G-PCC.png" width="19.5%" >
+<img src="assets/JPEG-Range.png" width="19.5%" >
 
 
-<img src="assets/colorbar_bpp2.png" width="400" height="10">
+<img src="assets/colorbar_bpp2.png" width="60%">
 </div>
 
 
@@ -51,16 +51,16 @@ From left to right: Ours-uniform, Ours-Nonuniform, Draco, G-PCC, and JPEG-Range,
 
 <div align="center">
 
-<img src="assets/ours_uniform_people.png" width="200" height="58">
-<img src="assets/ours_uniform_people_bev.png" width="200" height="58">
-<img src="assets/ours_nonuniform_people.png" width="200" height="58">
+<img src="assets/ours_uniform_people.png" width="32%">
+<img src="assets/ours_uniform_people_bev.png" width="32%">
+<img src="assets/ours_nonuniform_people.png" width="32%">
 
-<img src="assets/draco_people.png" width="200" height="58">
-<img src="assets/G-PCC_people.png" width="200" height="58">
-<img src="assets/JPEG-Range_people.png" width="200" height="58">
+<img src="assets/draco_people.png" width="32%">
+<img src="assets/G-PCC_people.png" width="32%">
+<img src="assets/JPEG-Range_people.png" width="32%">
 
 </div>
-First row, from left to right: Ours-Uniform, Ours-Uniform(birds-eye-view), Ours-Nonuniform
+First row, from left to right: Ours-Uniform, Ours-Uniform(birds-eye-view), Ours-Nonuniform;
 Second row, from left to right: Draco, G-PCC, and JPEG-Range.
 
 **Dataset:**
