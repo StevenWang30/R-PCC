@@ -102,6 +102,8 @@ class PointCloudSegment:
         if pc_filter.shape[0] > 5000:
             random_idx = np.random.choice(pc_filter.shape[0], 5000, replace=False)
             pc_filter = pc_filter[random_idx]
+        if pc_filter.shape[0] < 800:
+            pc_filter = point_cloud.reshape((-1, 3))
 
         _, ground_model = self.ransac_plane_segmentation(pc_filter)
 

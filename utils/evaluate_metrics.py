@@ -103,7 +103,7 @@ def calc_point_to_point_plane_psnr(points1, points2, idx1=None, idx2=None, r=59.
     return point_to_point_result, point_to_plane_result
 
 
-@njit
+# @njit
 def assign_attr(attr1, idx1, idx2):
     """Given point sets x1 and x2, transfers attributes attr1 from x1 to x2.
     idx1: N2 array containing the nearest neighbors indices of x2 in x1

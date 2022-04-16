@@ -2,6 +2,8 @@ import IPython
 import copy
 import numpy as np
 
+from ops.cpp_modules import contour_utils_cpp
+
 
 class FloodFill():
     def __init__(self, contour_map, original_idx_map=None, compresed_idx=None):
@@ -192,32 +194,40 @@ class ContourExtractor:
             idx_sequence:
                 1, 2, 3, 2, 1, 2, 3, 2, 1, 2, 3, 2
         '''
-        [row, col] = idx_map.shape
-        contour_map = np.zeros((row, col))
-        contour_map[:, 0] = 1
-        contour_map[:, 1:] = idx_map[:, 1:] - idx_map[:, :-1]
-        contour_map[np.where(contour_map != 0)] = 1
-        idx_sequence = idx_map[np.where(contour_map == 1)]
+        # # python version
+        # [row, col] = idx_map.shape
+        # contour_map = np.zeros((row, col))
+        # contour_map[:, 0] = 1
+        # contour_map[:, 1:] = idx_map[:, 1:] - idx_map[:, :-1]
+        # contour_map[np.where(contour_map != 0)] = 1
+        # idx_sequence = idx_map[np.where(contour_map == 1)]
+        
+        contour_map, idx_sequence = contour_utils_cpp.extract_contour(idx_map)
         return contour_map, idx_sequence
 
     @staticmethod
     def recover_map(contour_map, idx_sequence):
-        idx_map = np.zeros_like(contour_map, dtype=np.uint16)
-        cm_flat = contour_map.reshape(-1)
-        idx_map = idx_map.reshape(-1)
-        pointer = 0
-        for i in range(idx_sequence.shape[0]):
-            index = idx_sequence[i]
-            idx_map[pointer] = index
-            pointer += 1
-            if pointer >= cm_flat.shape[0]:
-                break
-            while cm_flat[pointer] == 0:
-                idx_map[pointer] = index
-                pointer += 1
-                if pointer >= cm_flat.shape[0]:
-                    break
-        return idx_map.reshape(contour_map.shape)
+        # # python version
+        # idx_map = np.zeros_like(contour_map, dtype=np.uint16)
+        # cm_flat = contour_map.reshape(-1)
+        # idx_map = idx_map.reshape(-1)
+        # pointer = 0
+        # for i in range(idx_sequence.shape[0]):
+        #     index = idx_sequence[i]
+        #     idx_map[pointer] = index
+        #     pointer += 1
+        #     if pointer >= cm_flat.shape[0]:
+        #         break
+        #     while cm_flat[pointer] == 0:
+        #         idx_map[pointer] = index
+        #         pointer += 1
+        #         if pointer >= cm_flat.shape[0]:
+        #             break
+        # idx_map = idx_map.reshape(contour_map.shape)
+        # return idx_map
+
+        idx_map = contour_utils_cpp.recover_map(contour_map, idx_sequence)
+        return idx_map
 
 
 if __name__ == '__main__':

@@ -517,6 +517,82 @@ py::array_t<float> point_modeling(py::array_t<float> range_image, py::array_t<in
     return point_model;
 }
 
+
+std::tuple<py::array_t<int>, py::array_t<int>> extract_contour(py::array_t<int> idx_map) {
+    // input array
+    py::buffer_info im_buf = idx_map.request();
+    int *im_ptr = (int *) im_buf.ptr;
+    int h = im_buf.shape[0];
+    int w = im_buf.shape[1];
+
+    // return array
+    auto contour_map = py::array_t<int>(h * w);
+    py::buffer_info cm_buf = contour_map.request();
+    int *cm_ptr = (int *) cm_buf.ptr;
+
+    vector<int> idx_sequence_vec;
+    for (int h_i = 0; h_i < h; h_i++){
+        idx_sequence_vec.push_back(im_ptr[h_i * w]);
+        cm_ptr[h_i * w] = 1;
+        for (int w_i = 1; w_i < w; w_i++)
+            if (im_ptr[h_i * w + w_i] - im_ptr[h_i * w + w_i - 1] != 0){
+                idx_sequence_vec.push_back(im_ptr[h_i * w + w_i]);
+                cm_ptr[h_i * w + w_i] = 1;
+            }
+            else{
+                cm_ptr[h_i * w + w_i] = 0;
+            }
+    }
+
+    // return array
+    int seq_size = idx_sequence_vec.size();
+    auto idx_sequence = py::array_t<int>(seq_size);
+    py::buffer_info is_buf = idx_sequence.request();
+    int *is_ptr = (int *) is_buf.ptr;
+    for (int i = 0; i < seq_size; i++){
+        is_ptr[i] = idx_sequence_vec[i];
+    }
+
+    contour_map.resize({h, w});
+    return std::make_tuple(contour_map, idx_sequence);
+}
+
+
+py::array_t<int> recover_map(py::array_t<int> contour_map, py::array_t<int> idx_sequence) {
+    // input array
+    py::buffer_info cm_buf = contour_map.request();
+    int *cm_ptr = (int *) cm_buf.ptr;
+    py::buffer_info is_buf = idx_sequence.request();
+    int *is_ptr = (int *) is_buf.ptr;
+    int h = cm_buf.shape[0];
+    int w = cm_buf.shape[1];
+    int l = is_buf.shape[0];
+
+    // return array
+    auto idx_map = py::array_t<int>(h * w);
+    py::buffer_info im_buf = idx_map.request();
+    int *im_ptr = (int *) im_buf.ptr;
+    
+    int pointer = 0;
+    for (int i = 0; i < l; i++){
+        int index = is_ptr[i];
+        im_ptr[pointer] = index;
+        pointer++;
+        if (pointer >= h * w)
+            break;
+        while (cm_ptr[pointer] == 0){
+            im_ptr[pointer] = index;
+            pointer++;
+            if (pointer >= h * w)
+                break;
+        }
+    }
+
+    idx_map.resize({h, w});
+    return idx_map;
+}
+
+
 // feature extractor
 PYBIND11_MODULE(feature_extractor_cpp, m) {
         m.doc() = "Find point's feature and search key points using pybind11"; // optional module docstring
@@ -544,6 +620,13 @@ PYBIND11_MODULE(quantization_utils_cpp, m) {
     m.def("nonuniform_quantize", &nonuniform_quantize, "Non-uniform quantization (without zero points).");
 }
 
+// contour extractor modules
+PYBIND11_MODULE(contour_utils_cpp, m) {
+    m.doc() = "Cpp modules of contour extractor in contour_utils.py using pybind11";
+
+    m.def("extract_contour", &extract_contour, "Extract contour and index sequence from segmentation map.");
+    m.def("recover_map", &recover_map, "Recover segmentation map from contour and index sequence.");
+}
 
 // dataset transformer modules
 PYBIND11_MODULE(dataset_utils_cpp, m) {

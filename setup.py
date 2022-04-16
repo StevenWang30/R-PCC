@@ -89,6 +89,13 @@ if __name__ == '__main__':
                     'src/cpp_modules.cpp',
                 ],
             ),
+            make_cpp_ext(
+                name='contour_utils_cpp',
+                module='ops.cpp_modules',
+                sources=[
+                    'src/cpp_modules.cpp',
+                ],
+            ),
         ],
     )
 

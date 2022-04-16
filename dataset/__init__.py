@@ -50,7 +50,14 @@ __lidar_csv__ = {
 
 
 def build_dataset(datalist=None, dataset_name=None, lidar_type=None, use_radius_outlier_removal=False):
-    assert dataset_name is not None or lidar_type is not None, "Must set dataset name or LiDAR type."
+    # assert dataset_name is not None or lidar_type is not None, "Must set dataset name or LiDAR type."
+    if dataset_name is not None:
+        return __dataset__[dataset_name](
+            datalist,
+            __dataset_cfg__[dataset_name],
+            __dataset_csv__[dataset_name],
+            use_radius_outlier_removal
+        )
     if lidar_type is not None:
         return DatasetTemplate(
             datalist,
@@ -59,9 +66,4 @@ def build_dataset(datalist=None, dataset_name=None, lidar_type=None, use_radius_
             use_radius_outlier_removal
         )
     else:
-        return __dataset__[dataset_name](
-            datalist,
-            __dataset_cfg__[dataset_name],
-            __dataset_csv__[dataset_name],
-            use_radius_outlier_removal
-        )
+        return DatasetTemplate(datalist, dataset_cfg=None, use_radius_outlier_removal=use_radius_outlier_removal)

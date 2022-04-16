@@ -1,3 +1,7 @@
+import os
+import sys
+BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, BASE_DIR)
 import numpy as np
 import argparse
 import time
@@ -7,10 +11,6 @@ from utils.compress_utils import compress_point_cloud, decompress_point_cloud
 from utils.segment_utils import PointCloudSegment
 from utils.evaluate_metrics import calc_chamfer_distance, calc_point_to_point_plane_psnr
 from dataset import build_dataset
-import os
-import sys
-BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, BASE_DIR)
 from utils.compress_utils import QuantizationModule, save_compressed_bitstream, read_compressed_bitstream
 import IPython
 import concurrent.futures as futures
@@ -45,7 +45,7 @@ for key, val in vars(args).items():
     print("{:16} {}".format(key, val))
 
 
-def compress():
+def decompress():
     compressor_cfg = load_compressor_cfg(args.compressor_yaml)
     accuracy = compressor_cfg['accuracy'] * 2
     basic_compressor = BasicCompressor(compressor_yaml=args.compressor_yaml)
@@ -135,4 +135,4 @@ def compress():
 
 
 if __name__ == '__main__':
-    compress()
+    decompress()

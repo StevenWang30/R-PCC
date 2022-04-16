@@ -57,7 +57,7 @@ class DatasetTemplate:
             pcd = o3d.io.read_point_cloud(file)
             point_cloud = np.asarray(pcd.points)
         else:
-            assert False, 'File type not correct.'
+            assert False, 'File type not correct: ' + file
 
         point_cloud = point_cloud[:, :3]
         return point_cloud
